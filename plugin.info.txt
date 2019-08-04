@@ -1,0 +1,7 @@
+base   bujomode
+author John Brooks
+email  john@fastquake.com
+date   2019-08-04
+name   BujoMode plugin
+desc   A syntax mode for writing bullet journal entries
+url    http://www.fastquake.com/
