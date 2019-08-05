@@ -24,7 +24,9 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
      * @return string Syntax mode type
      */
     function getType() { return 'formatting'; }
-    function getAllowedTypes() { return array('formatting', 'substition', 'disabled'); }
+    function getAllowedTypes() { return array('container', 'formatting',
+                                              'substition', 'protected',
+                                              'disabled', 'paragraphs'); }
     function getPType() { return 'stack'; }
     function getSort() { return 191; }
 
