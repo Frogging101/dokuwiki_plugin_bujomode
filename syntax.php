@@ -11,47 +11,53 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
-class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin
-{
+class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
     /**
      * @return string Syntax mode type
      */
-    public function getType()
-    {
-        return 'FIXME: container|baseonly|formatting|substition|protected|disabled|paragraphs';
-    }
-
-    /**
-     * @return string Paragraph type
-     */
-    public function getPType()
-    {
-        return 'FIXME: normal|block|stack';
-    }
-
-    /**
-     * @return int Sort order - Low numbers go before high numbers
-     */
-    public function getSort()
-    {
-        return FIXME;
-    }
+    function getType() { return 'formatting'; }
+    function getAllowedTypes() { return array('formatting', 'substition', 'disabled'); }
+    function getPType() { return 'stack'; }
+    function getSort() { return 191; }
 
     /**
      * Connect lookup pattern to lexer.
      *
      * @param string $mode Parser mode
      */
-    public function connectTo($mode)
-    {
-        $this->Lexer->addSpecialPattern('<FIXME>', $mode, 'plugin_bujomode');
-//        $this->Lexer->addEntryPattern('<FIXME>', $mode, 'plugin_bujomode');
+    function connectTo($mode) {
+        $this->Lexer->addEntryPattern('<bujo[^\R>]*>\s*\R', $mode, 'plugin_bujomode');
     }
 
-//    public function postConnect()
-//    {
-//        $this->Lexer->addExitPattern('</FIXME>', 'plugin_bujomode');
-//    }
+    function getBullets() {
+        $bullets = array();
+        foreach (explode("\n", $this->getConf('bullets')) as $line) {
+            $line = trim($line);
+            if ($line === '')
+                continue;
+            $split = preg_split('/\s+/', $line, 2);
+            if (count($split) == 1)
+                $bullets[$split[0]] = '';
+            else
+                $bullets[$split[0]] = $split[1];
+        }
+        return $bullets;
+    }
+
+    function postConnect() {
+        $this->bullets = $this->getBullets();
+        $this->bulletState = false;
+        $this->indentLevel = 0;
+
+        $this->Lexer->addExitPattern('</bujo[^\R>]*>', 'plugin_bujomode');
+
+        $this->Lexer->addPattern(
+            preg_quote($this->getConf('indent')),
+            'plugin_bujomode');
+        foreach ($this->bullets as $bullet => $replacement) {
+            $this->Lexer->addPattern(preg_quote($bullet), 'plugin_bujomode');
+        }
+    }
 
     /**
      * Handle matches of the bujomode syntax
@@ -63,11 +69,16 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin
      *
      * @return array Data for the renderer
      */
-    public function handle($match, $state, $pos, Doku_Handler $handler)
-    {
-        $data = array();
+    function handle($match, $state, $pos, Doku_Handler $handler) {
+        switch ($state) {
+            case DOKU_LEXER_UNMATCHED:
+            case DOKU_LEXER_MATCHED:
+            case DOKU_LEXER_ENTER:
+            case DOKU_LEXER_EXIT:
+                return array($state, $match);
+        }
 
-        return $data;
+        return false;
     }
 
     /**
@@ -79,13 +90,54 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin
      *
      * @return bool If rendering was successful.
      */
-    public function render($mode, Doku_Renderer $renderer, $data)
-    {
-        if ($mode !== 'xhtml') {
-            return false;
+    function render($mode, Doku_Renderer $renderer, $indata) {
+        list($state, $data) = $indata;
+
+        if ($mode == 'xhtml') {
+            switch ($state) {
+                case DOKU_LEXER_UNMATCHED:
+                    $newline = strpos($data, "\n");
+                    if ($this->bulletState && $newline !== false) {
+                        $renderer->doc .= $renderer->_xmlEntities(
+                                substr($data, 0, $newline));
+                        $renderer->doc .= '</bujo-text></bujo-entry>';
+                        $renderer->doc .= "<br />";
+                        $this->bulletState = false;
+                    }
+                    $renderer->doc .= $renderer->_xmlEntities(
+                            substr($data, $newline));
+                    break;
+                case DOKU_LEXER_ENTER:
+                    $renderer->doc .= '<bujo>';
+                    break;
+                case DOKU_LEXER_EXIT:
+                    $renderer->doc .= '</bujo>';
+                    break;
+                case DOKU_LEXER_MATCHED:
+                    /* Matched a bullet */
+                    if ($data === $this->getConf('indent')) {
+                        ++$this->indentLevel;
+                        break;
+                    }
+
+                    $renderer->doc .= '<bujo-entry>';
+
+                    if ($this->indentLevel > 0) {
+                        $renderer->doc .=
+                            '<bujo-indent>'.
+                            str_repeat('&nbsp;', $this->indentLevel*4).
+                            '</bujo-indent>';
+                        $this->indentLevel = 0;
+                    }
+                    $renderer->doc .= '<bujo-bullet>'.$this->bullets[$data].
+                                      '&nbsp;</bujo-bullet><bujo-text>';
+                    $this->bulletState = true;
+                    break;
+            }
+            return true;
         }
 
-        return true;
+        return false;
     }
 }
 

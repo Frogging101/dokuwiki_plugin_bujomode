@@ -5,5 +5,12 @@
  * @author John Brooks <john@fastquake.com>
  */
 
-//$conf['fixme']    = 'FIXME';
+$conf['bullets'] = '
+(.)   •
+()    ◦
+[y]   ✓
+--    —
+>
+<';
 
+$conf['indent'] = '\\>';

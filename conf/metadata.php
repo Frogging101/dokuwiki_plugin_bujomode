@@ -6,5 +6,5 @@
  */
 
 
-//$meta['fixme'] = array('string');
-
+$meta['bullets'] = array('');
+$meta['indent'] = array('string');
