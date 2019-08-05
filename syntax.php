@@ -57,6 +57,9 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
     function postConnect() {
         $this->Lexer->addExitPattern('</bujo\b[^\R>]*>', 'plugin_bujomode');
         $this->Lexer->addPattern(preg_quote($this->indent), 'plugin_bujomode');
+        // Double-newlines are passed to the eol handler, so match those first
+        $this->Lexer->addPattern('\n\n', 'plugin_bujomode');
+        $this->Lexer->addPattern('\n', 'plugin_bujomode');
 
         foreach ($this->bullets as $bullet => $replacement) {
             $this->Lexer->addPattern(preg_quote($bullet), 'plugin_bujomode');
@@ -75,8 +78,14 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
      */
     function handle($match, $state, $pos, Doku_Handler $handler) {
         switch ($state) {
-            case DOKU_LEXER_UNMATCHED:
             case DOKU_LEXER_MATCHED:
+                if ($match == "\n\n") {
+                    // Pass to eol handler to create a new paragraph
+                    $handler->eol($match, $state, $pos);
+                    $handler->eol($match, $state, $pos);
+                    return false;
+                }
+            case DOKU_LEXER_UNMATCHED:
             case DOKU_LEXER_ENTER:
             case DOKU_LEXER_EXIT:
                 return array($state, $match);
@@ -100,16 +109,7 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
         if ($mode == 'xhtml') {
             switch ($state) {
                 case DOKU_LEXER_UNMATCHED:
-                    $newline = strpos($data, "\n");
-                    if ($this->bulletState && $newline !== false) {
-                        $renderer->doc .= $renderer->_xmlEntities(
-                                substr($data, 0, $newline));
-                        $renderer->doc .= '</bujo-text></bujo-entry>';
-                        $renderer->doc .= "<br />";
-                        $this->bulletState = false;
-                    }
-                    $renderer->doc .= $renderer->_xmlEntities(
-                            substr($data, $newline));
+                    $renderer->doc .= $renderer->_xmlEntities($data);
                     break;
                 case DOKU_LEXER_ENTER:
                     $renderer->doc .= '<bujo>';
@@ -118,7 +118,14 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
                     $renderer->doc .= '</bujo>';
                     break;
                 case DOKU_LEXER_MATCHED:
-                    /* Matched a bullet */
+                    if ($data === "\n") {
+                        // Single newline. Terminate the current entry.
+                        if ($this->bulletState) {
+                            $renderer->doc .= "</bujo-text></bujo-entry><br />\n";
+                            $this->bulletState = false;
+                        }
+                        break;
+                    }
                     if ($data === $this->indent) {
                         ++$this->indentLevel;
                         break;
