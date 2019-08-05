@@ -26,7 +26,7 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
      * @param string $mode Parser mode
      */
     function connectTo($mode) {
-        $this->Lexer->addEntryPattern('<bujo[^\R>]*>\s*\R', $mode, 'plugin_bujomode');
+        $this->Lexer->addEntryPattern('<bujo\b[^\R>]*>\s*\R', $mode, 'plugin_bujomode');
     }
 
     function getBullets() {
@@ -49,7 +49,7 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
         $this->bulletState = false;
         $this->indentLevel = 0;
 
-        $this->Lexer->addExitPattern('</bujo[^\R>]*>', 'plugin_bujomode');
+        $this->Lexer->addExitPattern('</bujo\b[^\R>]*>', 'plugin_bujomode');
 
         $this->Lexer->addPattern(
             preg_quote($this->getConf('indent')),
