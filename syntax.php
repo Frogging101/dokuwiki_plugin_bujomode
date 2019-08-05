@@ -129,8 +129,10 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
                             '</bujo-indent>';
                         $this->indentLevel = 0;
                     }
-                    $renderer->doc .= '<bujo-bullet>'.$this->bullets[$data].
-                                      '&nbsp;</bujo-bullet><bujo-text>';
+                    $renderer->doc .= '<bujo-bullet>';
+                    $renderer->doc .= $this->bullets[$data] ?
+                                      $this->bullets[$data] : $data;
+                    $renderer->doc .= '&nbsp;</bujo-bullet><bujo-text>';
                     $this->bulletState = true;
                     break;
             }
