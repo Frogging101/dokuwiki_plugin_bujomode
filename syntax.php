@@ -12,6 +12,14 @@ if (!defined('DOKU_INC')) {
 }
 
 class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
+    function __construct() {
+        $this->bullets = $this->getBullets();
+        $this->indent = $this->getConf('indent');
+
+        $this->bulletState = false;
+        $this->indentLevel = 0;
+    }
+
     /**
      * @return string Syntax mode type
      */
@@ -45,15 +53,9 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
     }
 
     function postConnect() {
-        $this->bullets = $this->getBullets();
-        $this->bulletState = false;
-        $this->indentLevel = 0;
-
         $this->Lexer->addExitPattern('</bujo\b[^\R>]*>', 'plugin_bujomode');
+        $this->Lexer->addPattern(preg_quote($this->indent), 'plugin_bujomode');
 
-        $this->Lexer->addPattern(
-            preg_quote($this->getConf('indent')),
-            'plugin_bujomode');
         foreach ($this->bullets as $bullet => $replacement) {
             $this->Lexer->addPattern(preg_quote($bullet), 'plugin_bujomode');
         }
@@ -115,7 +117,7 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
                     break;
                 case DOKU_LEXER_MATCHED:
                     /* Matched a bullet */
-                    if ($data === $this->getConf('indent')) {
+                    if ($data === $this->indent) {
                         ++$this->indentLevel;
                         break;
                     }
