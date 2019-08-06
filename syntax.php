@@ -29,6 +29,12 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
                                               'disabled', 'paragraphs'); }
     function getPType() { return 'stack'; }
     function getSort() { return 191; }
+    function accepts($mode) {
+        if ($mode === 'linebreak')
+            // Matches '\\'; we're going to handle it ourselves
+            return false;
+        return parent::accepts($mode);
+    }
 
     /**
      * Connect lookup pattern to lexer.
@@ -57,6 +63,10 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
     function postConnect() {
         $this->Lexer->addExitPattern('</bujo\b[^\R>]*>', 'plugin_bujomode');
         $this->Lexer->addPattern(preg_quote($this->indent), 'plugin_bujomode');
+
+        // Handle line break syntax: \\
+        $this->Lexer->addPattern('\x5C{2}[ \t\n]', 'plugin_bujomode');
+
         // Double-newlines are passed to the eol handler, so match those first
         $this->Lexer->addPattern('\n\n', 'plugin_bujomode');
         $this->Lexer->addPattern('\n', 'plugin_bujomode');
@@ -118,6 +128,10 @@ class syntax_plugin_bujomode extends DokuWiki_Syntax_Plugin {
                     $renderer->doc .= '</bujo>';
                     break;
                 case DOKU_LEXER_MATCHED:
+                    if (substr($data, 0, 2) === '\\\\') {
+                        $renderer->doc .= "<br />\n";
+                        break;
+                    }
                     if ($data === "\n") {
                         // Single newline. Terminate the current entry.
                         if ($this->bulletState) {
